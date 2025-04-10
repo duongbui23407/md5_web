@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VICTORY - MD5</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: url('https://i.imgur.com/Fl2fG0K.png') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .overlay {
+      background-color: rgba(0, 0, 0, 0.65);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+      width: 100%;
+      max-width: 480px;
+      color: #fff;
+      text-align: center;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      font-size: 26px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      height: 48px;
+      padding: 12px;
+      font-size: 17px;
+      border: none;
+      border-radius: 8px;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    .paste-btn {
+      width: 48px;
+      height: 48px;
+      background-color: #0d6efd;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s;
+    }
+
+    .paste-btn:hover {
+      background-color: #0b5ed7;
+    }
+
+    .paste-btn img {
+      width: 22px;
+      height: 22px;
+    }
+
+    button.analyze, button.clear-btn {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 17px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button.analyze {
+      background-color: #28a745;
+      color: white;
+    }
+
+    button.analyze:hover {
+      background-color: #218838;
+    }
+
+    button.clear-btn {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    button.clear-btn:hover {
+      background-color: #c82333;
+    }
+
+    .result {
+      margin-top: 25px;
+      font-size: 18px;
+    }
+
+    .highlight {
+      font-weight: bold;
+      color: #ffc107;
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay">
+    <h2>Victory Phân Tích MD5</h2>
+
+    <div class="input-group">
+      <input type="text" id="md5Input" placeholder="Nhập mã MD5...">
+      <button class="paste-btn" onclick="pasteClipboard()">
+        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828913.png" alt="Dán">
+      </button>
+    </div>
+
+    <button class="analyze" onclick="analyzeMD5()">🔍 Bắt Đầu Phân Tích</button>
+    <button class="clear-btn" onclick="clearInput()">🧹 Xóa Mã Phân Tích Cũ</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    async function pasteClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text.length === 32 && /^[a-fA-F0-9]{32}$/.test(text)) {
+          document.getElementById("md5Input").value = text;
+        } else {
+          alert("Nội Dung Này Không Phải Mã MD5 ? .");
+        }
+      } catch (err) {
+        alert("Không thể truy cập clipboard. Vui lòng dán thủ công bằng Ctrl + V.");
+      }
+    }
+
+    function clearInput() {
+      document.getElementById("md5Input").value = "";
+      document.getElementById("result").innerHTML = "";
+    }
+
+    function analyzeMD5() {
+      const md5 = document.getElementById("md5Input").value.trim();
+      if (md5.length !== 32 || !/^[a-fA-F0-9]{32}$/.test(md5)) {
+        document.getElementById("result").innerHTML = "<span style='color: #ff4d4d;'>❌ Mã MD5 không hợp lệ.</span>";
+        return;
+      }
+
+      const nums = md5.split("").map(c => parseInt(c, 16));
+      const total = nums.reduce((a, b) => a + b, 0);
+      const avg = total / 32;
+      const evenCount = nums.filter(n => n % 2 === 0).length;
+      const over8Count = nums.filter(n => n > 8).length;
+
+      let score = 0;
+      if (avg > 7.5) score++;
+      if (evenCount > 16) score++;
+      if (over8Count >= 10) score++;
+
+      const isTai = score >= 2;
+      const result = isTai ? "🎲 Tài" : "🎲 Xỉu";
+      const confidence = score === 3 ? 90 : score === 2 ? 75 : 60;
+
+      const taiPercent = isTai ? confidence : 100 - confidence;
+      const xiuPercent = 100 - taiPercent;
+
+      document.getElementById("result").innerHTML = `
+        ✅ <b>Kết Quả Sau Khi Phân Tích:</b><br><br>
+        🔐 <b>Mã MD5:</b> <span class="highlight">${md5}</span><br><br>
+        📊 <b>Xác Suất:</b><br>
+        🎲 Tài: <span class="highlight">${taiPercent}%</span><br>
+        🎲 Xỉu: <span class="highlight">${xiuPercent}%</span><br><br>
+        🧠 <b>Sau Khi Phân Tích:</b> <span class="highlight">${result}</span><br>
+        📈 <b>Tỉ lệ ăn:</b> <span class="highlight">${confidence}%</span>
+      `;
+    }
+  </script>
+</body>
+</html>
