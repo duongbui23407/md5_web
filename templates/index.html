@@ -147,6 +147,13 @@
       document.getElementById("result").innerHTML = "";
     }
 
+    function hexToBytes(hex) {
+      const bytes = [];
+      for (let c = 0; c < hex.length; c += 2)
+        bytes.push(parseInt(hex.substr(c, 2), 16));
+      return bytes;
+    }
+
     function analyzeMD5() {
       const md5 = document.getElementById("md5Input").value.trim();
       if (md5.length !== 32 || !/^[a-fA-F0-9]{32}$/.test(md5)) {
@@ -154,32 +161,52 @@
         return;
       }
 
-      const nums = md5.split("").map(c => parseInt(c, 16));
-      const total = nums.reduce((a, b) => a + b, 0);
-      const avg = total / 32;
-      const evenCount = nums.filter(n => n % 2 === 0).length;
-      const over8Count = nums.filter(n => n > 8).length;
+      const methods = [];
 
-      let score = 0;
-      if (avg > 7.5) score++;
-      if (evenCount > 16) score++;
-      if (over8Count >= 10) score++;
+      methods.push(() => {
+        const bytes = hexToBytes(md5);
+        return [(bytes[0] % 6) + 1, (bytes[1] % 6) + 1, (bytes[2] % 6) + 1];
+      });
 
-      const isTai = score >= 2;
-      const result = isTai ? "🎲 Tài" : "🎲 Xỉu";
-      const confidence = score === 3 ? 90 : score === 2 ? 75 : 60;
+      methods.push(() => {
+        const bytes = hexToBytes(md5);
+        return [(bytes[29] % 6) + 1, (bytes[30] % 6) + 1, (bytes[31] % 6) + 1];
+      });
 
-      const taiPercent = isTai ? confidence : 100 - confidence;
-      const xiuPercent = 100 - taiPercent;
+      methods.push(() => {
+        const a = parseInt(md5.slice(0, 10), 16);
+        const b = parseInt(md5.slice(10, 22), 16);
+        const c = parseInt(md5.slice(22, 32), 16);
+        return [(a % 6) + 1, (b % 6) + 1, (c % 6) + 1];
+      });
+
+      methods.push(() => {
+        let total = 0;
+        for (let i = 0; i < md5.length; i++) {
+          total += parseInt(md5[i], 16);
+        }
+        return [(total % 6) + 1, ((total + 1) % 6) + 1, ((total + 2) % 6) + 1];
+      });
+
+      const allResults = methods.map(fn => fn());
+      const freq = {};
+      allResults.forEach(arr => {
+        const key = arr.join('-');
+        freq[key] = (freq[key] || 0) + 1;
+      });
+
+      const best = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
+      const [d1, d2, d3] = best[0].split('-').map(Number);
+      const total = d1 + d2 + d3;
+      const result = total >= 11 ? "🎲 Tài" : "🎲 Xỉu";
 
       document.getElementById("result").innerHTML = `
         ✅ <b>Kết Quả Sau Khi Phân Tích:</b><br><br>
         🔐 <b>Mã MD5:</b> <span class="highlight">${md5}</span><br><br>
-        📊 <b>Xác Suất:</b><br>
-        🎲 Tài: <span class="highlight">${taiPercent}%</span><br>
-        🎲 Xỉu: <span class="highlight">${xiuPercent}%</span><br><br>
-        🧠 <b>Sau Khi Phân Tích:</b> <span class="highlight">${result}</span><br>
-        📈 <b>Tỉ lệ ăn:</b> <span class="highlight">${confidence}%</span>
+        🎲 <b>Xúc Xắc:</b> <span class="highlight">${d1} - ${d2} - ${d3}</span><br>
+        ➕ <b>Tổng:</b> <span class="highlight">${total}</span><br><br>
+        🧠 <b>Kết Quả:</b> <span class="highlight">${result}</span><br>
+        🔍 <b>Khớp:</b> <span class="highlight">${best[1]}/4 thuật toán</span>
       `;
     }
   </script>
